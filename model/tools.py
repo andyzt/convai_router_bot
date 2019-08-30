@@ -22,7 +22,11 @@ def get_image_from_text(text: str) -> bytes:
     fnt_color = (0, 0, 0)
     fnt = ImageFont.truetype(str(path_to_font), font_size)
 
-    lines = wrap(text, width=25)
+    # Sorry for this code, it's splitting by *** of input text 
+    texts = text.split('***')
+    lines = ['<||>'.join(wrap(txt, width=25)) for txt in texts]
+    lines = '<||>***<||>'.join(lines).split('<||>')
+
     width = 20
     if lines:
         width += max([fnt.getsize(line)[0] for line in lines])
