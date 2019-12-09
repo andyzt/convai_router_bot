@@ -244,45 +244,56 @@ def export_training_conversations(date_begin=None, date_end=None, reveal_sender=
             u = users[i]
             obj = {}
             try:
-                uid = str(u.peer.user_key.user_id)
-                uclass = 'Human'
-            except AttributeError:
-                uid = str(u.peer.id)
-                uclass = 'Bot'
-            obj['user_class'] = uclass
-            obj['user_id'] = uid
-            obj['user_external_id'] = u.peer_conversation_guid
-            user_map[u.peer] = (uid, uclass)
+                try:
+                    uid = str(u.peer.user_key.user_id)
+                    uclass = 'Human'
+                except AttributeError:
+                    uid = str(u.peer.id)
+                    uclass = 'Bot'
+                obj['user_class'] = uclass
+                obj['user_id'] = uid
+                obj['user_external_id'] = u.peer_conversation_guid
+                user_map[u.peer] = (uid, uclass)
 
-            other_profile_true = users[j].assigned_profile.persona
-            if u.other_peer_profile_selected is not None:
-                other_profile_hyp = u.other_peer_profile_selected.persona
-            else:
-                other_profile_hyp = None
+                other_profile_true = users[j].assigned_profile.persona
+                if u.other_peer_profile_selected is not None:
+                    other_profile_hyp = u.other_peer_profile_selected.persona
+                else:
+                    other_profile_hyp = None
 
-            if other_profile_hyp is None:
-                obj['profile_match'] = 0
-            elif other_profile_hyp == other_profile_true:
-                obj['profile_match'] = 1
-            else:
-                obj['profile_match'] = -1
+                if other_profile_hyp is None:
+                    obj['profile_match'] = 0
+                elif other_profile_hyp == other_profile_true:
+                    obj['profile_match'] = 1
+                else:
+                    obj['profile_match'] = -1
 
-            other_profile_options = [pr.persona for pr in u.other_peer_profile_options]
-            ended_dialog = False
-            if 'triggered_dialog_end' in u:
-                if u['triggered_dialog_end']:
-                    ended_dialog = True
+                other_profile_options = [pr.persona for pr in u.other_peer_profile_options]
+                ended_dialog = False
+                if 'triggered_dialog_end' in u:
+                    if u['triggered_dialog_end']:
+                        ended_dialog = True
 
-            obj['dialog_evaluation'] = u.dialog_evaluation_score
-            obj['profile'] = u.assigned_profile.persona
-            obj['topics'] = u.assigned_profile.topics
-            obj['other_profile_options'] = other_profile_options
-            obj['ended_dialog'] = ended_dialog
+                obj['dialog_evaluation'] = u.dialog_evaluation_score
+                obj['profile'] = u.assigned_profile.persona
+                obj['topics'] = u.assigned_profile.topics
+                obj['other_profile_options'] = other_profile_options
+                obj['ended_dialog'] = ended_dialog
+            except:
+                obj['dialog_evaluation'] = 5
+                obj['profile'] = ''
+                obj['topics'] = ['']
+                obj['other_profile_options'] = ['']
+                obj['ended_dialog'] = True
             training_conv['users'].append(obj)
 
         for msg in conv.messages:
             msg: Message = msg
-            usr = user_map[msg.sender]
+            try:
+                usr = user_map[msg.sender]
+            except:
+                print(msg)
+                usr = ['unknown','unknown']
             training_message = {
                 #'id': msg.msg_id,
                 'sender': usr[0],

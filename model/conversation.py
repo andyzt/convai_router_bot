@@ -62,12 +62,12 @@ class Conversation(Document):
         p1_topics_n = len(p1_topics)
         p2_topics_n = len(p2_topics)
 
-        if self.active_topic_index + 1 < min(p1_topics_n, p2_topics_n):
-            if self.messages_to_switch_topic_left <= 0:
-                self.active_topic_index += 1
-                self.reset_topic_switch_counter()
-                return 0
-            else:
-                return self.messages_to_switch_topic_left
+        #if self.active_topic_index + 1 < min(p1_topics_n, p2_topics_n):
+        if self.messages_to_switch_topic_left <= 0:
+            self.active_topic_index += 1
+            self.reset_topic_switch_counter()
+            return 0
         else:
-            return -1
+            return self.messages_to_switch_topic_left
+        #else:
+        #    return -1

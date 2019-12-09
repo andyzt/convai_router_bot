@@ -175,9 +175,9 @@ def setup_routes():
                     web.post('/bot{token}/sendMessage', handle_bot_send_message)])
     fb_config = config['facebook']
     tg_config = config['telegram']
-    if fb_config:
-        app.add_routes([web.get(urlparse(fb_config['webhook']).path, handle_fb_verification),
-                        web.post(urlparse(fb_config['webhook']).path, handle_fb_message)])
+#    if fb_config:
+#        app.add_routes([web.get(urlparse(fb_config['webhook']).path, handle_fb_verification),
+#                        web.post(urlparse(fb_config['webhook']).path, handle_fb_message)])
     if tg_config:
         app.add_routes([web.post(urlparse(tg_config['webhook']).path, handle_tg_message)])
 
@@ -265,5 +265,7 @@ if __name__ == '__main__':
     parser.add_argument('--path', help='Path to the unix socket file')
     parser.add_argument('--port')
     args = parser.parse_args()
-
-    web.run_app(app, path=args.path, port=args.port)
+    import ssl
+    ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    ssl_context.load_cert_chain('webhook_cert.pem', 'webhook_pkey.pem')
+    web.run_app(app, path=args.path, port=args.port, ssl_context=ssl_context)
