@@ -122,15 +122,6 @@ class AbstractDialogHandler(ABC):
         """
         pass
 
-    @abstractmethod
-    async def dialog_is_active(self, conversation_id: int) -> bool:
-        """
-        Check if dialog is active.
-        :param conversation_id: integer id of the dialog
-        :return: True if dialog is active, False otherwise
-        """
-        pass
-
 
 class AbstractGateway(ABC):
     class ConversationFailReason(enum.Enum):
@@ -242,9 +233,6 @@ class NoopDialogHandler(AbstractDialogHandler):
 
     async def complain(self, conversation_id: int, complainer: User):
         return True
-
-    async def dialog_is_active(self, conversation_id: int) -> bool:
-        return False
 
 
 class HumansGateway(AbstractGateway, AbstractHumansGateway):
@@ -505,6 +493,8 @@ class HumansGateway(AbstractGateway, AbstractHumansGateway):
             return
 
         conv = self._conversations[user]
+        if (text is not None) and (len(text) < 10):
+            await self._messenger_for_user(user).send_message_to_user(user, "<<< старайтесь использовать для ответа реплики из 3-6 слов >>>", False)
         if self.evaluate_message_required and conv.messages_to_evaluate:
             messenger = self._messenger_for_user(user)
             await messenger.send_message_to_user(user, self.messages('evaluate_all_messages'), False)
@@ -537,8 +527,14 @@ class HumansGateway(AbstractGateway, AbstractHumansGateway):
         user = await self._update_user_record_in_db(initiator)
         if not await self._validate_user_state(user, self.UserState.IN_DIALOG, self.messages('not_in_dialog')):
             return
-
         conv = self._conversations[user]
+        messages_to_switch_topic_left = await self.dialog_handler.switch_to_next_topic(conv.conv_id, user)
+        print(messages_to_switch_topic_left)
+        if messages_to_switch_topic_left > 0:
+            messenger = self._messenger_for_user(user)
+            await messenger.send_message_to_user(user, 'Для окончания диалога осталось '+str(messages_to_switch_topic_left)+' сообщений', False)
+            return
+
         await self.dialog_handler.trigger_dialog_end(conv.conv_id, user)
 
     async def on_evaluate_dialog(self, evaluator: User, score: Optional[int]) -> bool:
@@ -551,8 +547,8 @@ class HumansGateway(AbstractGateway, AbstractHumansGateway):
             return False
 
         conv = self._conversations[user]
-        await self.dialog_handler.evaluate_dialog(conv.conv_id, user, score)
-
+        #await self.dialog_handler.evaluate_dialog(conv.conv_id, user, score)
+        """
         if self.dialog_options['assign_profile'] and self.evaluation_options['guess_profile']:
             if self.guess_profile_sentence_by_sentence:
                 if not conv.shuffled_sentences:
@@ -565,15 +561,17 @@ class HumansGateway(AbstractGateway, AbstractHumansGateway):
                                                           [x.description for x in conv.opponent_profile_options])
         else:
             if self.reveal_dialog_id:
-                peer_conversation_guid = conv.peer_conversation_guid
-                if await self.dialog_handler.dialog_is_active(conv.conv_id):
-                    await messenger.send_message_to_user(user,
-                                                         self.messages('evaluation_saved_show_id',
-                                                                       peer_conversation_guid),
-                                                         False)
+                peer_conversation_guid = self._conversations[user].peer_conversation_guid
+                await messenger.send_message_to_user(user,
+                                                     self.messages('evaluation_saved_show_id',
+                                                                   peer_conversation_guid),
+                                                     False)
             else:
                 await messenger.send_message_to_user(user, self.messages('evaluation_saved'), False)
-
+        """
+        await self.dialog_handler.evaluate_dialog(conv.conv_id, user, score)
+        if self._conversations.get(user) is not None:
+          await messenger.send_message_to_user(user, self.messages('evaluation_saved'), False)
         return True
 
     async def on_other_peer_profile_selected(self, evaluator: User, profile_idx: int,
@@ -622,7 +620,7 @@ class HumansGateway(AbstractGateway, AbstractHumansGateway):
 
         if self.dialog_options['assign_profile']:
             await messenger.send_message_to_user(user, self.messages('start_conversation_peer_found'), False)
-            await messenger.send_message_to_user(user, self.messages('start_conversation_profile_assigning'), False)
+            #await messenger.send_message_to_user(user, self.messages('start_conversation_profile_assigning'), False)
             kwargs = {'image': profile.description_image} if self.dialog_options['use_images'] else {}
             await messenger.send_message_to_user(user, profile.description, False,
                                                  keyboard_buttons=self.keyboards['in_dialog'], **kwargs)
@@ -632,7 +630,9 @@ class HumansGateway(AbstractGateway, AbstractHumansGateway):
 
         if self.dialog_options['show_topics'] and profile.topics:
             kwargs = {'image': profile.get_topic_image(0)} if self.dialog_options['use_images'] else {}
+            #msg = conversation.add_message(text='Switched to topic '+profile.topics[0], sender=peer, system=True)
             await self.on_topic_switched(user, profile.topics[0], **kwargs)
+        await messenger.send_message_to_user(user, "Пропустите этап приветствия и прощания, не надо спрашивать как зовут вашего собеседника, говорите сразу на предложенную тему.", False)
 
     async def send_message(self, conversation_id: int, msg_id: int, msg_text: str, receiving_peer: User):
         self.log.info(f'sending message to user {receiving_peer} in conversation {conversation_id}')
@@ -674,8 +674,10 @@ class HumansGateway(AbstractGateway, AbstractHumansGateway):
 
             if self.reveal_dialog_id:
                 peer_conversation_guid = self._conversations[user].peer_conversation_guid
-                msg = self.messages('finish_conversation_show_id', peer_conversation_guid)
+                #msg = self.messages('finish_conversation_show_id', peer_conversation_guid)
+                msg = self.messages('finish_conversation_show_id', ' ')
                 messages_to_send.append(messenger.send_message_to_user(user, msg, False))
+                messages_to_send.append(messenger.send_message_to_user(user, str(peer_conversation_guid), False))
 
             messages_to_send.append(messenger.send_message_to_user(user, thanks_text, False,
                                                                    keyboard_buttons=self.keyboards['idle']))

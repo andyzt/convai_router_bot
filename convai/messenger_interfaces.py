@@ -177,7 +177,8 @@ class TelegramMessenger(AbstractMessenger):
 
     async def perform_initial_setup(self):
         self.log.info('webhook address set')
-        await self._tg_bot.setWebhook(self.webhook_address)
+        cf = open('webhook_cert.pem', 'rb')
+        await self._tg_bot.setWebhook(self.webhook_address, cf)
 
     async def _send_message(self, user_id: str,
                             msg_text: str,
@@ -341,8 +342,11 @@ class TelegramMessenger(AbstractMessenger):
         await self._tg_bot.answerCallbackQuery(query_id, text=feedback)
 
     async def _update_inline_keyboard(self, chat_id: int, msg_id: int, kb: InlineKeyboardMarkup):
-        await self._tg_bot.editMessageReplyMarkup(msg_identifier=(chat_id, msg_id),
+        try:
+            await self._tg_bot.editMessageReplyMarkup(msg_identifier=(chat_id, msg_id),
                                                   reply_markup=kb)
+        except telepot.exception.TelegramError:
+            print(telepot.exception.TelegramError)
 
     @staticmethod
     def _get_flat_inline_keyboard_buttons(texts: List[str],

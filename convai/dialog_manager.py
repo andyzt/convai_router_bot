@@ -157,6 +157,7 @@ class DialogManager(AbstractDialogHandler):
 
         if messages_to_switch_topic_left == 0:
             index = conversation.active_topic_index
+
             msg = conversation.add_message(text=f'Switched to topic with index {index}', sender=peer, system=True)
 
             for conv_peer in conversation.participants:
@@ -166,9 +167,9 @@ class DialogManager(AbstractDialogHandler):
                 if isinstance(conv_peer.peer, Bot):
                     kwargs['conv_id'] = conversation_id
                     kwargs['msg_id'] = msg.msg_id
-                await self._gateway_for_peer(conv_peer.peer).on_topic_switched(conv_peer.peer,
-                                                                               conv_peer.assigned_profile.topics[index],
-                                                                               **kwargs)
+                #await self._gateway_for_peer(conv_peer.peer).on_topic_switched(conv_peer.peer,
+                #                                                               conv_peer.assigned_profile.topics[index],
+                #                                                               **kwargs)
 
         return messages_to_switch_topic_left
 
@@ -292,9 +293,6 @@ class DialogManager(AbstractDialogHandler):
 
         if completed:
             await self._cleanup_conversation(conversation_id)
-
-    async def dialog_is_active(self, conversation_id: int) -> bool:
-        return conversation_id in self._active_dialogs
 
     def _validate_conversation_and_peer(self, conversation_id: int, peer: Union[Bot, User]):
         log.debug(f'validating conversation and peer: {conversation_id}, {peer}')
@@ -425,8 +423,13 @@ class DialogManager(AbstractDialogHandler):
 
         self._active_dialogs[conv_id] = conversation
 
+        topics = ['Социальные сети','Фитнес','Уборка и чистота','Одиночество','Мода','Женская внешность','Мужская внешность','Деньги, богатство','Машины','Счастье']
+        curr_topic = random.sample(topics, k=1)
+        str_topic = curr_topic[0]
+        msg = conversation.add_message(text='Switched to topic '+str_topic, sender=peer, system=True)
         for p in conversation.participants:
             target_gateway = self._gateway_for_peer(p)
+            p.assigned_profile.topics[0] = str_topic
             await target_gateway.start_conversation(conv_id, p.peer, p.assigned_profile, p.peer_conversation_guid)
 
         self._reset_inactivity_timer(conv_id)
