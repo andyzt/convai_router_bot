@@ -122,6 +122,14 @@ class AbstractDialogHandler(ABC):
         """
         pass
 
+    @abstractmethod
+    async def dialog_is_active(self, conversation_id: int) -> bool:
+         """
+         Check if dialog is active.
+         :param conversation_id: integer id of the dialog
+         :return: True if dialog is active, False otherwise
+         """
+         pass
 
 class AbstractGateway(ABC):
     class ConversationFailReason(enum.Enum):
@@ -234,6 +242,8 @@ class NoopDialogHandler(AbstractDialogHandler):
     async def complain(self, conversation_id: int, complainer: User):
         return True
 
+    async def dialog_is_active(self, conversation_id: int) -> bool:
+         return False
 
 class HumansGateway(AbstractGateway, AbstractHumansGateway):
     class ConversationRecord:
@@ -547,7 +557,7 @@ class HumansGateway(AbstractGateway, AbstractHumansGateway):
             return False
 
         conv = self._conversations[user]
-        #await self.dialog_handler.evaluate_dialog(conv.conv_id, user, score)
+        await self.dialog_handler.evaluate_dialog(conv.conv_id, user, score)
         """
         if self.dialog_options['assign_profile'] and self.evaluation_options['guess_profile']:
             if self.guess_profile_sentence_by_sentence:
@@ -560,18 +570,19 @@ class HumansGateway(AbstractGateway, AbstractHumansGateway):
                                                           msg,
                                                           [x.description for x in conv.opponent_profile_options])
         else:
-            if self.reveal_dialog_id:
-                peer_conversation_guid = self._conversations[user].peer_conversation_guid
-                await messenger.send_message_to_user(user,
-                                                     self.messages('evaluation_saved_show_id',
-                                                                   peer_conversation_guid),
-                                                     False)
+        """
+        if self.reveal_dialog_id:
+            peer_conversation_guid = conv.peer_conversation_guid
+            if await self.dialog_handler.dialog_is_active(conv.conv_id):
+                import datetime
+                with open('id_log.txt', 'a') as f:
+                    f.write(str(datetime.datetime.now())+'\t'+peer_conversation_guid+'\n')
+                    
+                await messenger.send_message_to_user(user, self.messages('evaluation_saved_show_id', peer_conversation_guid), False)
             else:
                 await messenger.send_message_to_user(user, self.messages('evaluation_saved'), False)
-        """
-        await self.dialog_handler.evaluate_dialog(conv.conv_id, user, score)
-        if self._conversations.get(user) is not None:
-          await messenger.send_message_to_user(user, self.messages('evaluation_saved'), False)
+        #if self._conversations.get(user) is not None:
+        #  await messenger.send_message_to_user(user, self.messages('evaluation_saved'), False)
         return True
 
     async def on_other_peer_profile_selected(self, evaluator: User, profile_idx: int,
@@ -600,6 +611,9 @@ class HumansGateway(AbstractGateway, AbstractHumansGateway):
         if self._user_states[user] == self.UserState.WAITING_FOR_PARTNER_EVALUATION and notify_user:
             if self.reveal_dialog_id:
                 peer_conversation_guid = self._conversations[user].peer_conversation_guid
+                import datetime
+                with open('id_log.txt', 'a') as f:
+                    f.write(str(datetime.datetime.now())+'\t'+peer_conversation_guid+'\n')
                 await messenger.send_message_to_user(user,
                                                      self.messages('evaluation_saved_show_id', peer_conversation_guid),
                                                      False)
@@ -674,6 +688,9 @@ class HumansGateway(AbstractGateway, AbstractHumansGateway):
 
             if self.reveal_dialog_id:
                 peer_conversation_guid = self._conversations[user].peer_conversation_guid
+                import datetime
+                with open('id_log.txt', 'a') as f:
+                    f.write(str(datetime.datetime.now())+'\t'+peer_conversation_guid+'\n')
                 #msg = self.messages('finish_conversation_show_id', peer_conversation_guid)
                 msg = self.messages('finish_conversation_show_id', ' ')
                 messages_to_send.append(messenger.send_message_to_user(user, msg, False))

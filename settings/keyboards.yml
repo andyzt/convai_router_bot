@@ -8,12 +8,11 @@ idle:
     - '/help'
 in_dialog:
   default:
-    - '/end'
     - '/complain'
+    - '/end'
   show_topics:
-    - '/end'
-    - '/nexttopic'
     - '/complain'
+    - '/end'
 set_bot:
   default:
     - '/unsetbot'
