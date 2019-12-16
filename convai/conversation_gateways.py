@@ -653,7 +653,7 @@ class HumansGateway(AbstractGateway, AbstractHumansGateway):
         user = await self._update_user_record_in_db(receiving_peer)
         messenger = self._messenger_for_user(user)
         conv = self._conversations[user]
-        external_id = await messenger.send_message_to_user(receiving_peer, msg_text, True)
+        external_id = await messenger.send_message_to_user(receiving_peer, msg_text, False)
         conv.message_ids_map[external_id] = msg_id
 
         if self.evaluate_message_required:

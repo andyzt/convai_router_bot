@@ -112,6 +112,8 @@ class DialogManager(AbstractDialogHandler):
         if conversation_id in self._evaluations:
             raise ValueError('Conversation is finished. Only evaluation is allowed')
 
+        if conversation.messages[-1].sender == sender:
+            await self._gateway_for_peer(sender).send_message(conversation_id, 12344567, "<<< не посылайте 2 и более сообщений подряд, дождитесь ответа собеседника >>>", sender)
         msg = conversation.add_message(text=text, sender=sender, time=time)
 
         receiver = next((p.peer for p in conversation.participants if p.peer != sender), None)
